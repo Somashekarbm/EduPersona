@@ -1,0 +1,62 @@
+[
+    {
+        "answer": "Software is engineered not manufactured, software doesn't wear out and software is custom built",
+        "difficulty": "easy",
+        "options": [
+            "Software is engineered not manufactured, software doesn't wear out and software is custom built",
+            "Software is manufactured not engineered, software wears out and software is custom built",
+            "Software is engineered not manufactured, software wears out and software is custom built",
+            "Software is manufactured not engineered, software doesn't wear out and software is custom built"
+        ],
+        "question": "What are the three characteristics of Software?",
+        "question-number": 1
+    },
+    {
+        "answer": "A process is a collection of activities, actions and tasks that are performed when some work product is to be created",
+        "difficulty": "easy",
+        "options": [
+            "A process is a collection of activities, actions and tasks that are performed when some work product is to be created",
+            "A process is a collection of activities, actions and tasks that are performed when some work product is to be dissolved",
+            "A process is a collection of activities, actions and tasks that are performed when some work product is to be destroyed",
+            "A process is a collection of activities, actions and tasks that are performed when some work product is to be built"
+        ],
+        "question": "What is the definition of a Process in software engineering? ",
+        "question-number": 2
+    },
+    {
+        "answer": "Formal Methods model",
+        "difficulty": "medium",
+        "options": [
+            "Waterfall model",
+            "Spiral model",
+            "Formal Methods model",
+            "Incremental model"
+        ],
+        "question": "Which software development model makes use of rigorous mathematical notation for specification, development, and verification? ",
+        "question-number": 3
+    },
+    {
+        "answer": "To improve the quality of software products, increase the productivity and give job satisfaction to software engineers",
+        "difficulty": "medium",
+        "options": [
+            "To improve the quality of software products, increase the productivity and give job satisfaction to software engineers",
+            "To decrease the quality of software products, increase the productivity and give job satisfaction to software engineers",
+            "To improve the quality of software products, decrease the productivity and give job satisfaction to software engineers",
+            "To decrease the quality of software products, increase the productivity and dissatisfy to software engineers"
+        ],
+        "question": "What are the primary goals of Software Engineering? ",
+        "question-number": 4
+    },
+    {
+        "answer": "The development of formal models is currently time consuming and expensive, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers",
+        "difficulty": "hard",
+        "options": [
+            "The development of formal models is currently time consuming and expensive, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers",
+            "The development of formal models is currently fast and cheap, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers",
+            "The development of formal models is currently time consuming and cheap, Many developers have the required formal methods background and The models are easy to use as a communication mechanism for non-technical customers",
+            "The development of formal models is currently fast and expensive, Many developers have the required formal methods background and The models are easy to use as a communication mechanism for non-technical customers"
+        ],
+        "question": "What are the concerns about applying the Formal Methods Model in a business environment? ",
+        "question-number": 5
+    }
+]

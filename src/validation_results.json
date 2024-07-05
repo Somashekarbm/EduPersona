@@ -1,0 +1,37 @@
+[
+    {
+        "question-number": 1,
+        "question": "What are the three characteristics of Software?",
+        "correct_answer": "Software is engineered not manufactured, software doesn't wear out and software is custom built",
+        "user_answer": "Software is engineered not manufactured, software wears out and software is custom built",
+        "is_correct": false
+    },
+    {
+        "question-number": 2,
+        "question": "What is the definition of a Process in software engineering? ",
+        "correct_answer": "A process is a collection of activities, actions and tasks that are performed when some work product is to be created",
+        "user_answer": "A process is a collection of activities, actions and tasks that are performed when some work product is to be built",
+        "is_correct": false
+    },
+    {
+        "question-number": 3,
+        "question": "Which software development model makes use of rigorous mathematical notation for specification, development, and verification? ",
+        "correct_answer": "Formal Methods model",
+        "user_answer": "Formal Methods model",
+        "is_correct": true
+    },
+    {
+        "question-number": 4,
+        "question": "What are the primary goals of Software Engineering? ",
+        "correct_answer": "To improve the quality of software products, increase the productivity and give job satisfaction to software engineers",
+        "user_answer": "To improve the quality of software products, decrease the productivity and give job satisfaction to software engineers",
+        "is_correct": false
+    },
+    {
+        "question-number": 5,
+        "question": "What are the concerns about applying the Formal Methods Model in a business environment? ",
+        "correct_answer": "The development of formal models is currently time consuming and expensive, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers",
+        "user_answer": "The development of formal models is currently fast and cheap, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers",
+        "is_correct": false
+    }
+]

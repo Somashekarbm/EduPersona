@@ -1,0 +1,27 @@
+[
+    {
+        "question-number": 1,
+        "question": "What are the three characteristics of Software?",
+        "answer": "Software is engineered not manufactured, software wears out and software is custom built"
+    },
+    {
+        "question-number": 2,
+        "question": "What is the definition of a Process in software engineering? ",
+        "answer": "A process is a collection of activities, actions and tasks that are performed when some work product is to be built"
+    },
+    {
+        "question-number": 3,
+        "question": "Which software development model makes use of rigorous mathematical notation for specification, development, and verification? ",
+        "answer": "Formal Methods model"
+    },
+    {
+        "question-number": 4,
+        "question": "What are the primary goals of Software Engineering? ",
+        "answer": "To improve the quality of software products, decrease the productivity and give job satisfaction to software engineers"
+    },
+    {
+        "question-number": 5,
+        "question": "What are the concerns about applying the Formal Methods Model in a business environment? ",
+        "answer": "The development of formal models is currently fast and cheap, Few developers have the required formal methods background and The models are difficult to use as a communication mechanism for non-technical customers"
+    }
+]

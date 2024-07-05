@@ -1,0 +1,17 @@
+{
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "question-number": {"type": "NUMBER"},
+            "question": {"type": "STRING"},
+            "options": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"}
+            },
+            "answer": {"type": "STRING"},
+            "difficulty": {"type": "STRING"}
+        },
+        "required": ["question-number", "question", "options", "answer","difficulty"]
+    }
+}

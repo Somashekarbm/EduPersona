@@ -1,0 +1,16 @@
+{
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "question-number": {"type": "INTEGER"},
+            "question": {"type": "STRING"},
+            "correct_answer": {"type": "STRING"},
+            "simplified_content": {
+                "type": "STRING",
+                "description": "plain string containing simplified content without any additional formatting"
+            }
+        },
+        "required": ["question-number", "question", "correct_answer", "simplified_content"]
+    }
+}
