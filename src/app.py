@@ -1,6 +1,6 @@
 import json
 import streamlit as st
-
+#a part of the final project
 # Load the generated quiz from JSON file
 json_file = 'generated_quizzes.json'
 
