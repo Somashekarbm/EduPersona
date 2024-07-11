@@ -27,7 +27,7 @@ pip install langchain_openai langchain_community streamlit fpdf pdfminer.six str
 1. **Clone the Repository**
 
 ```bash
-git clone https://github.com/yourusername/personal-learning-assistant.git
+git clone https://github.com/Somashekarbm/EduPersona.git
 cd personal-learning-assistant
 ```
 
