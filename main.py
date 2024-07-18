@@ -1,25 +1,39 @@
 import os
+import langchain
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.chains import create_retrieval_chain
-import vertexai.generative_models
+from langchain.chains.retrieval import create_retrieval_chain
+from vertexai import generative_models
+from vertexai.generative_models import GenerationConfig, GenerativeModel
 import vertexai
 from dotenv import load_dotenv
 import json
 from pdfminer.high_level import extract_text
 import streamlit as st
 from fpdf import FPDF
-# from google.cloud import texttospeech
 import google.generativeai as genai
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 import tempfile
 from streamlit_pdf_viewer import pdf_viewer
+import traceback
+from sentence_transformers import SentenceTransformer
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from PyPDF2 import PdfReader
+import logging
+import pdfplumber
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sentence_transformers import SentenceTransformer
+import pymupdf
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Create a directory for user files
 USER_FILES_DIR = "user_files"
@@ -30,57 +44,10 @@ st.set_page_config(page_title="Personal Learning Assistant", page_icon="📚", l
 
 load_dotenv()
 
-API_KEY = os.getenv("API_KEY")
-
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"credentials.json"
-project_id = "gemini-practice-sai"
+API_KEY = os.getenv("OPENAI_API_KEY")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"Path\to\your\credentials.json"
+project_id = "personalised-learning-system-project"
 vertexai.init(project=project_id, location="us-central1")
-
-
-quiz_response_schema = {
-    "type": "ARRAY",
-    "items": {
-        "type": "OBJECT",
-        "properties": {
-            "question-number": {"type": "NUMBER"},
-            "question": {"type": "STRING"},
-            "options": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"}
-            },
-            "answer": {"type": "STRING"},
-            "difficulty": {"type": "STRING"}
-        },
-        "required": ["question-number", "question", "options", "answer", "difficulty"]
-    }
-}
-
-evaluation_theory_response_schema = {
-    "type": "ARRAY",
-    "items": {
-        "type": "OBJECT",
-        "properties": {
-            "question": {"type": "STRING"},
-            "user_answer": {"type": "STRING"},
-            "evaluation": {"type": "STRING"},
-            "correct_answer": {"type": "STRING"},
-            "content": {"type": "STRING"}
-        },
-        "required": ["question", "user_answer", "evaluation"]
-    }
-}
-
-theory_response_schema = {
-    "type": "ARRAY",
-    "items": {
-        "type": "OBJECT",
-        "properties": {
-            "question": {"type": "STRING"},
-            "answer": {"type": "STRING"}
-        },
-        "required": ["question", "answer"]
-    }
-}
 
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
@@ -124,40 +91,24 @@ def format_text(text):
         "In the Following text remove all the numbers and special characters, make it more readable and give the response in paragraphs, don't give it in points only in paragraphs. Here is text: \n" + text)
     return response.text
 
-# def generate_speech(text):
-#     client = texttospeech.TextToSpeechClient()
-#     synthesis_input = texttospeech.SynthesisInput(text=text)
-#     voice = texttospeech.VoiceSelectionParams(
-#         language_code="en-US",
-#         ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
-#     )
-#     audio_config = texttospeech.AudioConfig(
-#         audio_encoding=texttospeech.AudioEncoding.MP3
-#     )
-#     response = client.synthesize_speech(
-#         input=synthesis_input, voice=voice, audio_config=audio_config
-#     )
-#     return response.audio_content
+def extract_text_from_pdf(pdf_bytes):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+        temp_file.write(pdf_bytes)
+        temp_file_path = temp_file.name
 
-def extract_text_from_pdf(pdf_file):
-    if isinstance(pdf_file, str):
-        # If pdf_file is a string (file path), open the file and extract text
-        return extract_text(pdf_file)
-    else:
-        # If pdf_file is a file object, save it temporarily and extract text
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-            temp_file.write(pdf_file.getvalue())
-            temp_file_path = temp_file.name
-        
-        text = extract_text(temp_file_path)
-        os.remove(temp_file_path)
-        return text
+    text = ""
+    with pdfplumber.open(temp_file_path) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() or ""
+
+    os.unlink(temp_file_path)
+    return text
 
 def interact_with_gemini(model_id, prompt_text):
-    model_instance = vertexai.generative_models.GenerativeModel(model_id)
+    model_instance = GenerativeModel(model_id)
     response = model_instance.generate_content(
         prompt_text,
-        generation_config=vertexai.generative_models.GenerationConfig(
+        generation_config=GenerationConfig(
             temperature=0.2,
             max_output_tokens=1024,
             top_p=0.8,
@@ -172,16 +123,32 @@ def interact_with_gemini(model_id, prompt_text):
         return response.text
 
 def interact_with_gemini_quiz(model_id, prompt_text):
-    model_instance = vertexai.generative_models.GenerativeModel(model_id)
+    model_instance = GenerativeModel(model_id)
     response = model_instance.generate_content(
         prompt_text,
-        generation_config=vertexai.generative_models.GenerationConfig(
+        generation_config=GenerationConfig(
             temperature=0.2,
             max_output_tokens=1024,
             top_p=0.8,
             top_k=40,
             response_mime_type="application/json",
-            response_schema=quiz_response_schema,
+            response_schema = {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "question-number": {"type": "NUMBER"},
+                                        "question": {"type": "STRING"},
+                                        "options": {
+                                            "type": "ARRAY",
+                                            "items": {"type": "STRING"}
+                                        },
+                                        "answer": {"type": "STRING"},
+                                        "difficulty": {"type": "STRING"}
+                                    },
+                                    "required": ["question-number", "question", "options", "answer", "difficulty"]
+                                }
+                            }
         )
     )
     print("Raw response from Gemini:", response.text)  # Debug print
@@ -192,16 +159,29 @@ def interact_with_gemini_quiz(model_id, prompt_text):
         return response.text
 
 def interact_with_gemini_evaluation_theory(model_id, prompt_text):
-    model_instance = vertexai.generative_models.GenerativeModel(model_id)
+    model_instance =GenerativeModel(model_id)
     response = model_instance.generate_content(
         prompt_text,
-        generation_config=vertexai.generative_models.GenerationConfig(
+        generation_config=GenerationConfig(
             temperature=0.6,
             max_output_tokens=1024,
             top_p=0.8,
             top_k=40,
             response_mime_type="application/json",
-            response_schema=evaluation_theory_response_schema,
+            response_schema = {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "question": {"type": "STRING"},
+                                        "user_answer": {"type": "STRING"},
+                                        "evaluation": {"type": "STRING"},
+                                        "correct_answer": {"type": "STRING"},
+                                        "content": {"type": "STRING"}
+                                    },
+                                    "required": ["question", "user_answer", "evaluation"]
+                                }
+}
         )
     )
     print("Raw response from Gemini:", response.text)  # Debug print
@@ -212,16 +192,26 @@ def interact_with_gemini_evaluation_theory(model_id, prompt_text):
         return response.text
 
 def interact_with_gemini_theory(model_id, prompt_text):
-    model_instance = vertexai.generative_models.GenerativeModel(model_id)
+    model_instance = GenerativeModel(model_id)
     response = model_instance.generate_content(
         prompt_text,
-        generation_config=vertexai.generative_models.GenerationConfig(
+        generation_config=GenerationConfig(
             temperature=0.2,
             max_output_tokens=1024,
             top_p=0.8,
             top_k=40,
             response_mime_type="application/json",
-            response_schema=theory_response_schema,
+            response_schema = {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "question": {"type": "STRING"},
+                                        "answer": {"type": "STRING"}
+                                    },
+                                    "required": ["question", "answer"]
+                                }
+                            }
         )
     )
     print("Raw response from Gemini:", response.text)  # Debug print
@@ -232,10 +222,10 @@ def interact_with_gemini_theory(model_id, prompt_text):
         return response.text
 
 def interact_with_gemini_summariser(model_id, prompt_text):
-    model_instance = vertexai.generative_models.GenerativeModel(model_id)
+    model_instance = GenerativeModel(model_id)
     response = model_instance.generate_content(
         prompt_text,
-        generation_config=vertexai.generative_models.GenerationConfig(
+        generation_config=GenerationConfig(
             temperature=0.1,
             max_output_tokens=4096,
             top_p=0.8,
@@ -328,6 +318,23 @@ def summarize_text_pdf(content):
     response = interact_with_gemini_summariser(model_id, prompt)
     return response
 
+def interact_with_gemini_chatbot(query, context):
+    # This is a mock function. Replace it with the actual call to the Gemini model.
+    model_id = 'gemini-1.5-pro-001'
+    prompt = f"""
+    You are a highly skilled assistant. Please provide a detailed and accurate response to the user's query based on the following context.
+
+    Context:
+    {context}
+
+    User Query:
+    {query}
+
+    Please provide the response below:
+    """
+    response = interact_with_gemini(model_id, prompt)
+    return response
+
 def save_summary_to_pdf(summary, output_path):
     pdf = FPDF()
     pdf.add_page()
@@ -336,13 +343,52 @@ def save_summary_to_pdf(summary, output_path):
         pdf.multi_cell(0, 10, line)
     pdf.output(output_path)
 
-
-# New function to load user files
 def load_user_files(username):
     user_dir = os.path.join(USER_FILES_DIR, username)
     if not os.path.exists(user_dir):
         return []
     return [f for f in os.listdir(user_dir) if f.endswith('.pdf')]
+
+# Step 1: Extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    doc = pymupdf.open(pdf_path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
+
+# Step 2: Preprocess and segment text
+def preprocess_text(text):
+    paragraphs = text.split('\n\n')
+    return [para.strip() for para in paragraphs if para.strip()]
+
+# Step 3: Index the text
+def vectorize_text(text_chunks):
+    model = SentenceTransformer('all-MiniLM-L6-v2')  # or use TF-IDF, etc.
+    vectors = model.encode(text_chunks)
+    return vectors
+
+# Step 4: Process user query
+def vectorize_query(query):
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    query_vector = model.encode([query])
+    return query_vector
+
+# Step 5: Retrieve relevant context
+def retrieve_relevant_context(query_vector, text_vectors, text_chunks, top_n=5):
+    similarities = cosine_similarity(query_vector, text_vectors)[0]
+    top_indices = similarities.argsort()[-top_n:][::-1]
+    relevant_context = [text_chunks[i] for i in top_indices]
+    return relevant_context
+
+# Main function to handle the process
+def answer_query_from_pdf(pdf_path, query):
+    text = extract_text_from_pdf(pdf_path)
+    text_chunks = preprocess_text(text)
+    text_vectors = vectorize_text(text_chunks)
+    query_vector = vectorize_query(query)
+    context = retrieve_relevant_context(query_vector, text_vectors, text_chunks)
+    return context
 
 # Streamlit app
 st.title("Personal Learning Assistant")
@@ -378,7 +424,7 @@ if not st.session_state['authentication_status']:
                 st.session_state['username'] = login_username
                 st.session_state['user_files'] = load_user_files(login_username)
                 st.success("Login successful!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Invalid username or password")
 
@@ -422,7 +468,10 @@ if st.session_state['authentication_status']:
             with open(file_path, "wb") as f:
                 f.write(pdf_file.getvalue())
             
-            pdf_text = extract_text_from_pdf(pdf_file)
+            reader = PdfReader(file_path)
+            pdf_text = ""
+            for page in reader.pages:
+                pdf_text += page.extract_text()
             st.session_state['pdf_text'] = pdf_text
             st.session_state['user_files'] = load_user_files(st.session_state['username'])
             st.success(f"PDF '{pdf_file.name}' uploaded and processed successfully!")
@@ -439,7 +488,6 @@ if st.session_state['authentication_status']:
                 st.markdown("---")  # Add a separator between files
         else:
             st.info("You haven't uploaded any files yet.")
-
 
     elif page == "Generate Quiz":
         st.header("Generate Quiz from PDF Content")
@@ -547,87 +595,26 @@ if st.session_state['authentication_status']:
                 st.session_state['summary'] = summary
                 st.success("Summary generated successfully!")
                 st.write(summary)
-        
-       
 
     elif page == "Chat and View":
-        st.title("Chat with PDF Content")
+        st.header("Chat and View")
+        uploaded_pdf = st.file_uploader("Upload a PDF for Chat and View", type="pdf")
+        user_query = st.text_input("Enter your query here:")
         
-        pdf = st.file_uploader("Upload a PDF to chat", type="pdf", key="chat_pdf_upload")
+        if uploaded_pdf and user_query:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(uploaded_pdf.read())
+                temp_pdf_path = temp_pdf.name
 
-        if pdf:
-            st.subheader("PDF Viewer")
-            binary_data = pdf.getvalue()
-            pdf_viewer(input=binary_data, width=1400, height=800)  # Adjust height as needed
-
-        st.subheader("Chat Interface")
-
-        if pdf:
-            st.write("Processing PDF...")
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-                temp_file.write(pdf.read())
-                temp_file_path = temp_file.name
+            # Extract text from the uploaded PDF and process the query
+            context = answer_query_from_pdf(temp_pdf_path, user_query)
             
-            try:
-                loader = PyPDFLoader(temp_file_path)
-                text_documents = loader.load()
-                os.remove(temp_file_path)
-                st.session_state['text_documents'] = text_documents
-                st.success(f"PDF processed successfully! {len(text_documents)} pages loaded.")
-            except Exception as e:
-                st.error(f"Error processing PDF: {str(e)}")
-                st.session_state['text_documents'] = None
-
-        if 'text_documents' in st.session_state and st.session_state['text_documents']:
-            text_documents = st.session_state['text_documents']
+            # Assume gemini_model is an instance of Gemini 1.5 Pro
+            response = interact_with_gemini_chatbot(user_query, context)
             
-            # Splitting the text documents
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-            try:
-                split_text_documents = text_splitter.split_documents(text_documents)
-                
-                # Add page numbers to metadata
-                for i, doc in enumerate(split_text_documents):
-                    doc.metadata['page'] = i + 1
-                
-                db = Chroma.from_documents(split_text_documents, OpenAIEmbeddings())
-                
-                user_question = st.text_input("Enter your question about the PDF:")
-                if user_question:
-                    st.write("Processing your question...")
-                    prompt = ChatPromptTemplate.from_template(
-                        '''
-                        Answer the following question based on the provided context.
-                        Think step by step and explain the process in detail.
-                        You get a bonus point if you say it correctly.
-                        Include the page numbers where you found the information in your answer.
-                        <context>
-                            {context}
-                        </context>
-
-                        question: {input}
-                        '''
-                    )
-                    document_chain = create_stuff_documents_chain(
-                        ChatOpenAI(model="gpt-3.5-turbo"),
-                        prompt,
-                    )
-                    retriever = db.as_retriever()
-                    retrieval_chain = create_retrieval_chain(retriever, document_chain)
-                    response = retrieval_chain.invoke({'input': user_question})
-
-                    st.write("Answer:")
-                    st.write(response['answer'])
-
-                    st.write("Source Pages:")
-                    source_pages = set(doc.metadata['page'] for doc in response['context'])
-                    st.write(f"Information retrieved from page(s): {', '.join(map(str, sorted(source_pages)))}")
-
-            except Exception as e:
-                st.error(f"Error processing text documents: {str(e)}")
-        else:
-            st.warning("Please upload a PDF to start chatting.")
-
+            st.write("### Query Response:")
+            st.write(response)
+   
     elif page == "Logout":
         if st.button("Logout"):
             st.session_state['authentication_status'] = False
@@ -638,7 +625,7 @@ if st.session_state['authentication_status']:
             st.session_state['text_documents'] = None
             st.session_state['user_files'] = []
             st.success("You have been logged out successfully.")
-            st.experimental_rerun()
+            st.rerun()
 
 else:
     st.warning("Please enter your credentials to access the app.")
