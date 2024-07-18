@@ -49,6 +49,51 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"Path\to\your\credentials.json"
 project_id = "personalised-learning-system-project"
 vertexai.init(project=project_id, location="us-central1")
 
+quiz_response_schema = {
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "question-number": {"type": "NUMBER"},
+            "question": {"type": "STRING"},
+            "options": {
+                "type": "ARRAY",
+                "items": {"type": "STRING"}
+            },
+            "answer": {"type": "STRING"},
+            "difficulty": {"type": "STRING"}
+        },
+        "required": ["question-number", "question", "options", "answer", "difficulty"]
+    }
+}
+
+evaluation_theory_response_schema = {
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "question": {"type": "STRING"},
+            "user_answer": {"type": "STRING"},
+            "evaluation": {"type": "STRING"},
+            "correct_answer": {"type": "STRING"},
+            "content": {"type": "STRING"}
+        },
+        "required": ["question", "user_answer", "evaluation"]
+    }
+}
+
+theory_response_schema = {
+    "type": "ARRAY",
+    "items": {
+        "type": "OBJECT",
+        "properties": {
+            "question": {"type": "STRING"},
+            "answer": {"type": "STRING"}
+        },
+        "required": ["question", "answer"]
+    }
+}
+
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -350,12 +395,17 @@ def load_user_files(username):
     return [f for f in os.listdir(user_dir) if f.endswith('.pdf')]
 
 # Step 1: Extract text from PDF
-def extract_text_from_pdf(pdf_path):
-    doc = pymupdf.open(pdf_path)
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+def extract_text_from_pdf(file):
+    try:
+        doc = pymupdf.open(stream=file.read(), filetype="pdf")
+        text = ""
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            text += page.get_text()
+        return text
+    except Exception as e:
+        st.error(f"Error reading PDF: {e}")
+        return None
 
 # Step 2: Preprocess and segment text
 def preprocess_text(text):
