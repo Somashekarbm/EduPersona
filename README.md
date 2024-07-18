@@ -13,6 +13,12 @@ Welcome to the **Personal Learning Assistant** project! This project, created fo
 
 ## Getting Started
 
+If you get any error related to Response Schema after running the project , you might want to run the below code :
+
+```bash
+pip install --upgrade google-cloud-aiplatform
+```
+
 ### Prerequisites
 
 - Python 3.7+
