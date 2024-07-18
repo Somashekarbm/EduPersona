@@ -78,11 +78,12 @@ streamlit run app.py
 ```
 personal-learning-assistant/
 │
-├── app.py               # Main Streamlit app
+├── main.py               # Main Streamlit app
 ├── requirements.txt     # Required Python packages
 ├── .env                 # Environment variables
 ├── user_files/          # Directory to store user files
 └── users.db             # SQLite database for user authentication
+└── credentials.json     #credentials for your GCP project
 ```
 
 ## Usage
