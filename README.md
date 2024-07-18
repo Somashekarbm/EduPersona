@@ -22,6 +22,12 @@ Welcome to the **Personal Learning Assistant** project! This project, created fo
 pip install langchain_openai langchain_community streamlit fpdf pdfminer.six streamlit_pdf_viewer sqlite3 werkzeug google-cloud texttospeech google-auth google-auth-oauthlib google-auth-httplib2
 ```
 
+-install the packages present in the requirements.txt as well using the command:
+
+```bash
+pip install -r requirements.txt
+```
+
 ### Setting Up
 
 1. **Clone the Repository**
